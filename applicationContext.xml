@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx-4.3.xsd  
+	">
+
+	<!-- 配置数据库连接池C3P0 -->
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">
+		<property name="driverClass" value="oracle.jdbc.driver.OracleDriver" />
+		<property name="jdbcUrl" value="jdbc:oracle:thin:@localhost:1521:orcl" />
+		<property name="user" value="scott" />
+		<property name="password" value="tiger" />
+	</bean>
+
+	<!-- 配置SessionFactory -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+		<!-- 注入数据源 -->
+		<property name="dataSource" ref="dataSource" />
+		<!-- 配置hibernate参数 -->
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.Oracle10gDialect</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<prop key="hibernate.current_session_context_class">org.springframework.orm.hibernate5.SpringSessionContext</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.fetch_size">50</prop>
+			</props>
+		</property>
+		<!-- 单独加载每一个映射文件 -->
+		<property name="mappingResources">
+			<list>
+				<value>com/ssh/entity/Users.hbm.xml</value>
+			</list>
+		</property>
+	</bean>
+	
+	<!-- 配置JavaBean -->
+	<!-- 配置Dao -->
+	<bean id="userDao" class="com.ssh.dao.UserDao">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+	
+	<!-- 配置Service -->
+	<bean id="userService" class="com.ssh.service.UserService">
+		<property name="userDao" ref="userDao"/>
+	</bean>
+	
+	<!-- 配置Controll -->
+	<bean id="userAction" scope="prototype" class="com.ssh.web.UserAction">
+		<property name="userService" ref="userService"/>
+	</bean>
+	
+	<!-- Spring 声明式事务管理 -->
+	<bean id="transactionManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+	<!-- 设置事务的传播级别 -->
+	<tx:advice id="txAdivce" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="*" propagation="REQUIRED"/>
+		</tx:attributes>
+	</tx:advice>
+	<!-- 构建切面 -->
+	<aop:config>
+		<aop:pointcut expression="execution(* com.ssh.service.*.*(..))" id="mycut"/>
+		<aop:advisor advice-ref="txAdivce" pointcut-ref="mycut"/>
+	</aop:config>
+</beans>
+
+
+
+
+
+
+
